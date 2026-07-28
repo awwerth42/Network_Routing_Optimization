@@ -1,0 +1,18 @@
+Dijkstra's Algorithm Project
+
+This project uses Dijkstra's algorithm on the Stanford SNAP as-Skitter network dataset. The dataset represents Internet Autonomous System connections. It is an undirected and unweighted graph with 1,696,415 nodes and 11,095,298 edges.
+
+The goal of the project is to parse a real network dataset, store it in a graph data structure, run Dijkstra's algorithm, measure the running time, find the path from the first/source node to the last node, and generate graph files showing the results.
+
+The dataset is stored as an edge list. Each line contains two node IDs. Lines that begin with # are comments and are ignored by the program.
+
+An adjacency list is used instead of an adjacency matrix. An adjacency matrix would be too large because the dataset has more than 1.6 million nodes. A matrix would require trillions of entries, so an adjacency list is the better choice.
+
+Since the dataset is unweighted, every edge is given a weight of 1. This means the shortest path is measured by the number of edges between nodes.
+
+Dijkstra's algorithm starts at a source node and repeatedly chooses the node with the smallest known distance. It then checks each neighbor and updates distances when a shorter path is found. A priority queue is used to make the algorithm efficient.
+
+The program outputs the number of nodes loaded, the number of edges loaded, graph load time, Dijkstra running time, total runtime, path from the source node to the last node, and sample shortest path distances. It also creates results.csv, runtime_graph.svg, and path_length_graph.svg.
+
+Time Complexity: O((V + E) log V)
+Space Complexity: O(V + E)
