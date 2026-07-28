@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Routing Algorithm Lab — CSC 2400</title>
+<style>
+:root {
+  color-scheme: light;
+  --plane:      #f9f9f7;
+  --surface:    #fcfcfb;
+  --ink:        #0b0b0b;
+  --ink-2:      #52514e;
+  --muted:      #898781;
+  --grid:       #e1e0d9;
+  --baseline:   #c3c2b7;
+  --border:     rgba(11,11,11,0.10);
+  --accent:     #2a78d6;
+  --good:       #0ca30c;
+  --critical:   #d03b3b;
+  --s1: #2a78d6;  /* dijkstra */
+  --s2: #eb6834;  /* bellman-ford */
+  --s3: #1baf7a;  /* a* */
+  --s4: #eda100;  /* harmony search */
+  --radius: 12px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --plane:    #0d0d0d;
+    --surface:  #1a1a19;
+    --ink:      #ffffff;
+    --ink-2:    #c3c2b7;
+    --muted:    #898781;
+    --grid:     #2c2c2a;
+    --baseline: #383835;
+    --border:   rgba(255,255,255,0.10);
+    --accent:   #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+  --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+  --border: rgba(255,255,255,0.10); --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--plane); color: var(--ink);
+  font-family: var(--font); font-size: 15px; line-height: 1.5;
+}
+header {
+  display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  padding: 22px 28px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+header h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--ink-2); font-size: 13px; }
+.spacer { flex: 1; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 28px 64px; }
+.grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 940px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px;
+}
+.card + .card { margin-top: 16px; }
+.card h2 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); margin: 0 0 14px; font-weight: 650;
+}
+
+label { display: block; font-size: 13px; color: var(--ink-2); margin: 12px 0 5px; font-weight: 500; }
+select, input[type="number"], input[type="text"] {
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 14px;
+  color: var(--ink); background: var(--plane);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+select:focus-visible, input:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.checks { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+.checks label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; cursor: pointer; }
+.checks input { accent-color: var(--accent); width: 15px; height: 15px; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+button {
+  font: inherit; font-size: 14px; font-weight: 550; cursor: pointer;
+  border-radius: 8px; padding: 9px 16px; border: 1px solid transparent;
+  transition: filter .12s ease, opacity .12s ease;
+}
+button:hover:not(:disabled) { filter: brightness(1.08); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; width: 100%; }
+.btn-ghost {
+  background: transparent; color: var(--ink-2); border-color: var(--border);
+  padding: 6px 12px; font-size: 13px;
+}
+.actions { display: flex; gap: 8px; margin-top: 18px; }
+.actions .btn-primary { flex: 1; }
+
+.status-line { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.running { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+.dot.completed { background: var(--good); }
+.dot.failed, .dot.cancelled { background: var(--critical); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.status-text { font-size: 13px; color: var(--ink-2); }
+
+.bar { height: 6px; background: var(--grid); border-radius: 999px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .18s ease; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px; margin-top: 16px; }
+.tile { background: var(--plane); border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px; }
+.tile .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.tile .v { font-size: 22px; font-weight: 650; margin-top: 3px; letter-spacing: -0.02em; }
+.tile .u { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+#log {
+  margin-top: 14px; max-height: 150px; overflow-y: auto; font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink-2); background: var(--plane);
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+}
+#log div { padding: 1px 0; }
+#log .err { color: var(--critical); }
+
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.chart-title { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+.chart-sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tick { font-size: 11px; fill: var(--muted); }
+.cat { font-size: 12px; fill: var(--ink-2); }
+.val { font-size: 12px; font-weight: 600; fill: var(--ink); }
+.gl { stroke: var(--grid); stroke-width: 1; }
+.axis { stroke: var(--baseline); stroke-width: 1; }
+.empty { color: var(--muted); font-size: 13px; padding: 28px 0; text-align: center; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 650; }
+td .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 8px; }
+
+#tooltip {
+  position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+  background: var(--ink); color: var(--surface); font-size: 12px; font-weight: 500;
+  padding: 6px 9px; border-radius: 6px; z-index: 50; white-space: nowrap;
+}
+.report-charts img {
+  width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 14px; background: #fcfcfb;
+}
+details summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+pre.summary {
+  white-space: pre-wrap; font-size: 12.5px; color: var(--ink-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin: 10px 0 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Routing Algorithm Lab</h1>
+    <p>CSC 2400 — Dijkstra vs Bellman-Ford vs A* vs Harmony Search</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn-ghost" id="theme">Toggle theme</button>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ------------------------------------------------ controls -->
+  <div>
+    <div class="card">
+      <h2>Experiment</h2>
+      <label for="mode">What to run</label>
+      <select id="mode">
+        <option value="small">Quick check — small synthetic graphs (~5 s)</option>
+        <option value="real">Real networks from Stanford SNAP</option>
+        <option value="custom">Custom synthetic grid</option>
+        <option value="checkpoint">Full synthetic grid (~2 min)</option>
+        <option value="sweep">Harmony Search parameter sweep</option>
+      </select>
+
+      <div data-opts="real" hidden>
+        <label>Datasets</label>
+        <div class="checks" id="datasets"></div>
+        <label for="sample">BFS sample size (0 = full graph)</label>
+        <input type="number" id="sample" value="8000" min="0" step="500">
+        <p class="hint" id="sample-hint"></p>
+      </div>
+
+      <div data-opts="custom" hidden>
+        <label for="nodeCounts">Node counts</label>
+        <input type="text" id="nodeCounts" value="50, 250, 500">
+        <label>Densities</label>
+        <div class="checks" id="densities">
+          <label><input type="checkbox" value="sparse" checked> sparse</label>
+          <label><input type="checkbox" value="moderate" checked> moderate</label>
+          <label><input type="checkbox" value="dense"> dense</label>
+        </div>
+        <label for="seeds">Graph seeds</label>
+        <input type="text" id="seeds" value="11, 23">
+      </div>
+
+      <div data-opts="sweep" hidden>
+        <label for="sweepNodes">Graph size (nodes)</label>
+        <input type="number" id="sweepNodes" value="500" min="10" step="50">
+      </div>
+
+      <div data-opts="real custom sweep" hidden>
+        <div class="row2">
+          <div><label for="trials">HS trials</label><input type="number" id="trials" value="5" min="1"></div>
+          <div><label for="iterations">HS iterations</label><input type="number" id="iterations" value="150" min="1"></div>
+        </div>
+      </div>
+
+      <div data-opts="real custom" hidden>
+        <div class="row2">
+          <div><label for="repeats">Timing repeats</label><input type="number" id="repeats" value="3" min="1"></div>
+          <div><label for="hms">HMS</label><input type="number" id="hms" value="30" min="1"></div>
+        </div>
+        <div class="checks" style="margin-top:12px">
+          <label><input type="checkbox" id="measureMemory" checked> Measure peak memory (separate runs)</label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="run">Run experiment</button>
+        <button class="btn-ghost" id="cancel" disabled>Cancel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Machine</h2>
+      <div id="env" class="hint" style="margin:0"></div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ results -->
+  <div>
+    <div class="card">
+      <h2>Progress</h2>
+      <div class="status-line">
+        <span class="dot" id="dot"></span>
+        <span class="status-text" id="status">Idle — pick an experiment and press Run.</span>
+      </div>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="tiles" id="tiles"></div>
+      <div id="log"></div>
+    </div>
+
+    <div class="card">
+      <h2>Live results</h2>
+      <div class="charts">
+        <div>
+          <p class="chart-title">Mean runtime</p>
+          <p class="chart-sub">Log scale. Timing runs only.</p>
+          <div id="c-runtime"></div>
+        </div>
+        <div>
+          <p class="chart-title">Mean path cost</p>
+          <p class="chart-sub">Lower is better. Dijkstra is the exact optimum.</p>
+          <div id="c-cost"></div>
+        </div>
+        <div>
+          <p class="chart-title">Harmony Search gap above optimal</p>
+          <p class="chart-sub">Percent above Dijkstra, grouped by input.</p>
+          <div id="c-gap"></div>
+        </div>
+        <div>
+          <p class="chart-title">Peak memory</p>
+          <p class="chart-sub">Log scale. From tracemalloc runs.</p>
+          <div id="c-mem"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Algorithm averages</h2>
+      <div class="table-wrap"><table id="table"></table></div>
+      <div id="summary"></div>
+    </div>
+
+    <div class="card report-charts" id="report" hidden>
+      <h2>Generated report charts</h2>
+      <div id="report-imgs"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+"use strict";
+
+const ALGOS = ["dijkstra", "bellman_ford", "astar", "harmony_search"];
+const LABELS = {
+  dijkstra: "Dijkstra", bellman_ford: "Bellman-Ford",
+  astar: "A*", harmony_search: "Harmony Search",
+};
+const VARS = {
+  dijkstra: "--s1", bellman_ford: "--s2", astar: "--s3", harmony_search: "--s4",
+};
+const color = (a) => getComputedStyle(document.documentElement).getPropertyValue(VARS[a] || "--s1").trim();
+const $ = (id) => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+
+let rows = [];
+let runId = null;
+let source = null;
+let startedAt = 0;
+let timer = null;
+let expectedRows = 0;
+let redrawQueued = false;
+
+/* ------------------------------------------------------------ theme */
+$("theme").addEventListener("click", () => {
+  const dark = document.documentElement.getAttribute("data-theme") === "dark"
+    || (!document.documentElement.hasAttribute("data-theme")
+        && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+  scheduleRedraw();
+});
+
+/* ------------------------------------------------------------ options UI */
+const modeSelect = $("mode");
+function syncOptions() {
+  const mode = modeSelect.value;
+  document.querySelectorAll("[data-opts]").forEach((el) => {
+    el.hidden = !el.dataset.opts.split(" ").includes(mode);
+  });
+  if (mode === "real") { $("trials").value = 10; $("iterations").value = 250; }
+  if (mode === "sweep") { $("trials").value = 3; $("iterations").value = 100; }
+  if (mode === "custom") { $("trials").value = 5; $("iterations").value = 150; }
+}
+modeSelect.addEventListener("change", syncOptions);
+
+/* ------------------------------------------------------------ meta */
+fetch("/api/meta").then((r) => r.json()).then((meta) => {
+  const e = meta.environment;
+  $("env").innerHTML = [
+    `${e.os} (${e.machine})`,
+    `${e.logical_cpus} logical CPUs · ${e.total_memory_gb ?? "?"} GB RAM`,
+    `${e.python_implementation} ${e.python_version}`,
+  ].map((t) => `<div>${t}</div>`).join("");
+
+  $("datasets").innerHTML = meta.datasets.map((d) => `
+    <label title="${d.description}">
+      <input type="checkbox" value="${d.key}" ${d.key !== "roadnet-pa" ? "checked" : "checked"}>
+      ${d.name} <span style="color:var(--muted)">(${d.nodes.toLocaleString()}n)</span>
+    </label>`).join("");
+  $("sample-hint").textContent =
+    "Bellman-Ford is Θ(V·E), so large graphs are sampled to stay runnable.";
+  syncOptions();
+});
+
+/* ------------------------------------------------------------ run */
+$("run").addEventListener("click", start);
+$("cancel").addEventListener("click", () => {
+  if (runId) fetch("/api/cancel", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ run_id: runId }),
+  });
+});
+
+function collectOptions(mode) {
+  const checked = (id) => [...$(id).querySelectorAll("input:checked")].map((i) => i.value);
+  const num = (id) => Number($(id).value);
+  if (mode === "real") return {
+    datasets: checked("datasets"), sample: num("sample"),
+    trials: num("trials"), iterations: num("iterations"),
+    repeats: num("repeats"), measure_memory: $("measureMemory").checked,
+  };
+  if (mode === "custom") return {
+    node_counts: $("nodeCounts").value, densities: checked("densities"),
+    graph_seeds: $("seeds").value, trials: num("trials"),
+    iterations: num("iterations"), repeats: num("repeats"),
+    hms: num("hms"), measure_memory: $("measureMemory").checked,
+  };
+  if (mode === "sweep") return {
+    nodes: num("sweepNodes"), trials: num("trials"), iterations: num("iterations"),
+  };
+  return {};
+}
+
+async function start() {
+  const mode = modeSelect.value;
+  if (mode === "real" && collectOptions(mode).datasets.length === 0) {
+    return log("Select at least one dataset.", true);
+  }
+  reset();
+  setStatus("running", "Starting...");
+  $("run").disabled = true; $("cancel").disabled = false;
+
+  const res = await fetch("/api/run", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode, options: collectOptions(mode) }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    setStatus("failed", data.error || "Failed to start.");
+    log(data.error || "Failed to start.", true);
+    $("run").disabled = false; $("cancel").disabled = true;
+    return;
+  }
+
+  runId = data.run_id;
+  startedAt = Date.now();
+  timer = setInterval(updateTiles, 250);
+  source = new EventSource(`/api/events?run=${runId}`);
+  source.onmessage = (ev) => handle(JSON.parse(ev.data));
+  source.onerror = () => { /* stream_end closes it deliberately */ };
+}
+
+function reset() {
+  rows = []; expectedRows = 0;
+  $("log").innerHTML = ""; $("prog").style.width = "0";
+  $("report").hidden = true; $("report-imgs").innerHTML = "";
+  $("summary").innerHTML = "";
+  scheduleRedraw(); updateTiles();
+}
+
+function finish(status, message) {
+  if (source) { source.close(); source = null; }
+  if (timer) { clearInterval(timer); timer = null; }
+  runId = null;
+  $("run").disabled = false; $("cancel").disabled = true;
+  setStatus(status, message);
+  updateTiles();
+}
+
+function handle(ev) {
+  switch (ev.type) {
+    case "start":
+      expectedRows = ev.row_total || 0;
+      log(`Running ${ev.kind} experiment — ${ev.graph_total} graph(s), ~${expectedRows} runs.`);
+      break;
+    case "graph": {
+      const deg = ev.average_degree ? `, avg degree ${ev.average_degree}` : "";
+      const sampled = ev.sampled ? ` — sampled from ${ev.original_nodes.toLocaleString()} nodes` : "";
+      log(`[${ev.index}/${ev.total}] ${ev.label || ev.graph_id}: ${ev.nodes.toLocaleString()} nodes, ${ev.edges.toLocaleString()} edges${deg}${sampled}`);
+      setStatus("running", `${ev.label || ev.graph_id} (${ev.index}/${ev.total})`);
+      break;
+    }
+    case "row":
+      rows.push(ev.row);
+      scheduleRedraw();
+      break;
+    case "log": log(ev.message); break;
+    case "error": log(ev.message, true); finish("failed", ev.message); break;
+    case "cancelled": log(ev.message); finish("cancelled", "Cancelled."); break;
+    case "done":
+      $("summary").innerHTML = `<details open><summary>Interpretation</summary><pre class="summary">${escapeHtml(ev.summary.trim())}</pre></details>`;
+      if (ev.charts && ev.charts.length) {
+        $("report").hidden = false;
+        $("report-imgs").innerHTML = ev.charts
+          .map((c) => `<img src="/charts/${c}" alt="${c}" loading="lazy">`).join("");
+      }
+      log(`Done — ${ev.row_count} rows.`);
+      finish("completed", `Completed — ${ev.row_count} runs.`);
+      break;
+    case "stream_end":
+      if (source) { source.close(); source = null; }
+      break;
+  }
+}
+
+function setStatus(kind, text) {
+  $("dot").className = "dot " + kind;
+  $("status").textContent = text;
+}
+function log(message, isError) {
+  const el = document.createElement("div");
+  if (isError) el.className = "err";
+  el.textContent = message;
+  $("log").appendChild(el);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+/* ------------------------------------------------------------ aggregation */
+const isTiming = (r) => (r.run_type || "timing") === "timing";
+const num = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+
+function meanBy(list, field) {
+  const out = {};
+  for (const a of ALGOS) {
+    const vals = list.filter((r) => r.algorithm === a)
+      .map((r) => num(r[field])).filter((v) => v !== null && !Number.isNaN(v));
+    if (vals.length) out[a] = vals.reduce((x, y) => x + y, 0) / vals.length;
+  }
+  return out;
+}
+
+function gapByInput(list) {
+  const optimal = {}, hs = {};
+  for (const r of list) {
+    const c = num(r.path_cost);
+    if (c === null) continue;
+    if (r.algorithm === "dijkstra" && optimal[r.graph_id] === undefined) optimal[r.graph_id] = c;
+    else if (r.algorithm === "harmony_search") (hs[r.graph_id] ||= []).push(c);
+  }
+  const groups = {};
+  for (const r of list) {
+    if (r.algorithm !== "harmony_search" || !hs[r.graph_id]) continue;
+    const src = r.graph_source || "synthetic";
+    const key = src.startsWith("snap:")
+      ? `${src.slice(5)} ${Number(r.nodes).toLocaleString()}`
+      : `${Number(r.nodes).toLocaleString()}`;
+    (groups[key] ||= new Set()).add(r.graph_id);
+  }
+  const out = {};
+  for (const [key, ids] of Object.entries(groups)) {
+    const vals = [];
+    for (const id of ids) {
+      const opt = optimal[id];
+      if (opt === undefined || opt <= 0) continue;
+      for (const c of hs[id]) vals.push(((c - opt) / opt) * 100);
+    }
+    if (vals.length) out[key] = vals.reduce((x, y) => x + y, 0) / vals.length;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------ render */
+function scheduleRedraw() {
+  if (redrawQueued) return;
+  redrawQueued = true;
+  requestAnimationFrame(() => { redrawQueued = false; render(); });
+}
+
+function render() {
+  const timing = rows.filter(isTiming);
+  const memory = rows.filter((r) => !isTiming(r));
+  dotPlotLog($("c-runtime"), meanBy(timing, "runtime_ms"), "ms");
+  barChart($("c-cost"), meanBy(timing, "path_cost"), "");
+  barChart($("c-gap"), gapByInput(timing), "%", true);
+  dotPlotLog($("c-mem"), meanBy(memory, "peak_memory_kb"), "KiB");
+  renderTable(timing, memory);
+}
+
+function updateTiles() {
+  const timing = rows.filter(isTiming);
+  const elapsed = startedAt ? (Date.now() - startedAt) / 1000 : 0;
+  const rt = meanBy(timing, "runtime_ms");
+  const fastest = Object.keys(rt).sort((a, b) => rt[a] - rt[b])[0];
+  const gaps = Object.values(gapByInput(timing));
+  const gap = gaps.length ? gaps.reduce((x, y) => x + y, 0) / gaps.length : null;
+
+  const tiles = [
+    { k: "Runs", v: rows.length.toLocaleString(), u: expectedRows ? `of ~${expectedRows.toLocaleString()}` : "" },
+    { k: "Elapsed", v: elapsed.toFixed(1), u: "seconds" },
+    { k: "Fastest", v: fastest ? LABELS[fastest] : "—", u: fastest ? `${rt[fastest].toFixed(3)} ms` : "" },
+    { k: "HS gap", v: gap === null ? "—" : `${gap.toFixed(1)}%`, u: "above optimal" },
+  ];
+  $("tiles").innerHTML = tiles.map((t) =>
+    `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="u">${t.u}</div></div>`
+  ).join("");
+
+  if (expectedRows) {
+    $("prog").style.width = Math.min(100, (rows.length / expectedRows) * 100) + "%";
+  }
+}
+
+function svgEl(name, attrs) {
+  const el = document.createElementNS(SVGNS, name);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  return el;
+}
+function empty(host, message) {
+  host.innerHTML = `<div class="empty">${message}</div>`;
+}
+function tip(el, text) {
+  el.addEventListener("pointerenter", (e) => {
+    const t = $("tooltip");
+    t.textContent = text; t.style.opacity = "1";
+    t.style.left = Math.min(e.clientX + 12, innerWidth - t.offsetWidth - 12) + "px";
+    t.style.top = (e.clientY - 32) + "px";
+  });
+  el.addEventListener("pointerleave", () => { $("tooltip").style.opacity = "0"; });
+}
+
+function fmt(v) {
+  if (v >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if (v >= 10) return v.toFixed(1);
+  if (v >= 0.01) return v.toFixed(3);
+  return v.toFixed(4);
+}
+
+function dotPlotLog(host, values, unit) {
+  const entries = Object.entries(values).filter(([, v]) => v > 0);
+  if (!entries.length) return empty(host, "No data yet.");
+
+  const W = 420, rowH = 40, left = 118, right = 74, top = 18, bottom = 30;
+  const H = top + rowH * entries.length + bottom;
+  const vals = entries.map(([, v]) => v);
+  const lo = Math.floor(Math.log10(Math.min(...vals)));
+  let hi = Math.ceil(Math.log10(Math.max(...vals)));
+  if (hi <= lo) hi = lo + 1;
+  const x = (v) => left + ((Math.log10(v) - lo) / (hi - lo)) * (W - left - right);
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+  for (let e = lo; e <= hi; e++) {
+    svg.appendChild(svgEl("line", { class: "gl", x1: x(10 ** e), y1: top - 6, x2: x(10 ** e), y2: H - bottom + 4 }));
+    const t = svgEl("text", { class: "tick", x: x(10 ** e), y: H - bottom + 20, "text-anchor": "middle" });
+    t.textContent = 10 ** e >= 1 ? (10 ** e).toLocaleString() : String(10 ** e);
+    svg.appendChild(t);
+  }
+  entries.forEach(([algo, v], i) => {
+    const y = top + rowH * i + rowH / 2;
+    const c = color(algo);
+    svg.appendChild(svgEl("line", { x1: left, y1: y, x2: x(v), y2: y, stroke: c, "stroke-width": 2, opacity: 0.35 }));
+    const dot = svgEl("circle", { cx: x(v), cy: y, r: 6, fill: c });
+    tip(dot, `${LABELS[algo] || algo}: ${fmt(v)} ${unit}`.trim());
+    svg.appendChild(dot);
+    const name = svgEl("text", { class: "cat", x: left - 12, y: y + 4, "text-anchor": "end" });
+    name.textContent = LABELS[algo] || algo;
+    svg.appendChild(name);
+    const val = svgEl("text", { class: "val", x: x(v) + 12, y: y + 4 });
+    val.textContent = `${fmt(v)}${unit ? " " + unit : ""}`;
+    svg.appendChild(val);
+  });
+  svg.appendChild(svgEl("line", { class: "axis", x1: left, y1: H - bottom + 4, x2: W - right, y2: H - bottom + 4 }));
+  host.replaceChildren(svg);
+}
+
+function barChart(host, values, unit, singleHue) {
+  const entries = Object.entries(values);
+  if (!entries.length) return empty(host, "No data yet.");
+
+  const W = 420, H = 240, left = 48, right = 14, top = 22, bottom = 46;
+  const max = Math.max(...entries.map(([, v]) => v), 0) || 1;
+  const slot = (W - left - right) / entries.length;
+  const bw = Math.min(58, slot * 0.55);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" });
+
+  for (let s = 0; s <= 4; s++) {
+    const y = H - bottom - (s / 4) * (H - top - bottom);
+    svg.appendChild(svgEl("line", { class: "gl", x1: left, y1: y, x2: W - right, y2: y }));
+    const t = svgEl("text", { class: "tick", x: left - 8, y: y + 4, "text-anchor": "end" });
+    t.textContent = fmt((max * s) / 4);
+    svg.appendChild(t);
+  }
+  entries.forEach(([key, v], i) => {
+    const h = Math.max((v / max) * (H - top - bottom), 1);
+    const x = left + slot * i + (slot - bw) / 2;
+    const y = H - bottom - h;
+    const c = singleHue ? color("dijkstra") : color(key);
+    const rect = svgEl("rect", { x, y, width: bw, height: h, rx: 4, fill: c });
+    tip(rect, `${LABELS[key] || key}: ${fmt(v)}${unit}`);
+    svg.appendChild(rect);
+    const val = svgEl("text", { class: "val", x: x + bw / 2, y: y - 6, "text-anchor": "middle" });
+    val.textContent = `${fmt(v)}${unit}`;
+    svg.appendChild(val);
+    const label = LABELS[key] || key;
+    const lines = label.split(" ");
+    const txt = svgEl("text", { class: "cat", x: x + bw / 2, y: H - bottom + 16, "text-anchor": "middle" });
+    (lines.length > 1 && label.length > 10 ? lines : [label]).forEach((ln, j) => {
+      const span = svgEl("tspan", { x: x + bw / 2, dy: j === 0 ? 0 : 13 });
+      span.textContent = ln;
+      txt.appendChild(span);
+    });
+    svg.appendChild(txt);
+  });
+  svg.appendChild(svgEl("line", { class: "axis", x1: left, y1: H - bottom, x2: W - right, y2: H - bottom }));
+  host.replaceChildren(svg);
+}
+
+function renderTable(timing, memory) {
+  const rt = meanBy(timing, "runtime_ms");
+  const pc = meanBy(timing, "path_cost");
+  const mem = meanBy(memory, "peak_memory_kb");
+  const ops = {};
+  for (const a of ALGOS) {
+    const vals = timing.filter((r) => r.algorithm === a)
+      .map((r) => num(r.edge_examinations) ?? num(r.path_evaluations))
+      .filter((v) => v !== null && !Number.isNaN(v));
+    if (vals.length) ops[a] = vals.reduce((x, y) => x + y, 0) / vals.length;
+  }
+  const present = ALGOS.filter((a) => a in rt);
+  if (!present.length) {
+    $("table").innerHTML = `<tbody><tr><td class="empty">No data yet.</td></tr></tbody>`;
+    return;
+  }
+  const head = `<thead><tr><th>Algorithm</th><th>Runtime (ms)</th><th>Path cost</th>
+    <th>Basic ops</th><th>Peak mem (KiB)</th><th>Runs</th></tr></thead>`;
+  const body = present.map((a) => {
+    const n = timing.filter((r) => r.algorithm === a).length;
+    return `<tr>
+      <td><span class="swatch" style="background:${color(a)}"></span>${LABELS[a]}</td>
+      <td>${rt[a].toFixed(3)}</td>
+      <td>${pc[a] !== undefined ? pc[a].toFixed(2) : "—"}</td>
+      <td>${ops[a] !== undefined ? Math.round(ops[a]).toLocaleString() : "—"}</td>
+      <td>${mem[a] !== undefined ? mem[a].toFixed(1) : "—"}</td>
+      <td>${n}</td></tr>`;
+  }).join("");
+  $("table").innerHTML = head + `<tbody>${body}</tbody>`;
+}
+
+render(); updateTiles();
+</script>
+</body>
+</html>

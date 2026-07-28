@@ -1,0 +1,9 @@
+pytest>=8.0
+
+# Authoring dependencies for analysis.ipynb only. The routing_project library
+# itself uses nothing outside the Python standard library, so none of these are
+# needed to run the experiments or the GUI.
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.29
+matplotlib>=3.8
