@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="380.0" y="32" text-anchor="middle" font-family="Arial" font-size="22" font-weight="700">Mean Path Cost by Algorithm</text>
+<text x="24" y="220.0" transform="rotate(-90 24 220.0)" text-anchor="middle" font-family="Arial" font-size="13">Path cost</text>
+<line x1="90" y1="60" x2="90" y2="360" stroke="#444"/>
+<line x1="90" y1="360" x2="720" y2="360" stroke="#444"/>
+<rect x="114.0" y="70.9" width="127.5" height="289.1" fill="#2f6f8f"/>
+<text x="177.8" y="62.9" text-anchor="middle" font-family="Arial" font-size="12">94.62</text>
+<text x="177.8" y="382" text-anchor="middle" font-family="Arial" font-size="12">dijkstra</text>
+<rect x="265.5" y="70.9" width="127.5" height="289.1" fill="#5b8f52"/>
+<text x="329.2" y="62.9" text-anchor="middle" font-family="Arial" font-size="12">94.62</text>
+<text x="329.2" y="382" text-anchor="middle" font-family="Arial" font-size="12">bellman_ford</text>
+<rect x="417.0" y="70.9" width="127.5" height="289.1" fill="#c57b32"/>
+<text x="480.8" y="62.9" text-anchor="middle" font-family="Arial" font-size="12">94.62</text>
+<text x="480.8" y="382" text-anchor="middle" font-family="Arial" font-size="12">astar</text>
+<rect x="568.5" y="60.0" width="127.5" height="300.0" fill="#7b5ea7"/>
+<text x="632.2" y="52.0" text-anchor="middle" font-family="Arial" font-size="12">98.21</text>
+<text x="632.2" y="382" text-anchor="middle" font-family="Arial" font-size="12">harmony_search</text>
+</svg>
